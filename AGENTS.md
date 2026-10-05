@@ -30,15 +30,15 @@ If the task is complex:
 
 ## Status (as of 2026-10-05, after CLI hardening + display tests)
 
-- Repo at https://github.com/pinknyashka/pathtracing (public; first commit pushed, follow-up commit pending push); local `origin` = that URL.
-  - Push with a token that has `public_repo`/`repo` scope (a read-only token gets 403): `git -c credential.helper= push https://x-access-token:<TOKEN>@github.com/pinknyashka/pathtracing.git main` — the `credential.helper=` override stops the token being saved to Windows Credential Manager.
+- Repo at https://github.com/pinknyashka/pathtracing (public); local `origin` = that URL. Remote `main` is in sync with local (through the CLI-hardening commit `cc58337`).
+  - Push with a token that has `public_repo`/`repo` scope (a read-only token gets 403): `git -c credential.helper= push https://x-access-token:<TOKEN>@github.com/pinknyashka/pathtracing.git main` — the `credential.helper=` override stops the token being saved to Windows Credential Manager. (GitHub was reachable on 2026-10-05; the push of `8226713..cc58337` succeeded.)
 - Toolchain blocker RESOLVED offline (no msys2 package changes): `D:\Projects\__tools\mingw_7_2_0` on the machine PATH shadowed ucrt64's runtime DLLs, so gcc-15 frontends crashed at startup with `0xC00000FD`. Fix: User PATH now starts with `C:\msys64\ucrt64\bin`, plus 8 DLLs staged next to cc1/cc1plus. Full report + prevention runbook: `docs/toolchain-incident-2026-10-05.md`.
 - NEE self-blocking fixed in `src/render/tracer.h`: the visibility test now skips emissive boxes (it used to block on the sampled bar's own front face), and the emission contribution uses `cosEmit/d²`. Verified with a 1024-spp probe: lit.x=0.0503, shadow=0.0, framePix=(4.0, 0.18, 0.12); `test_tracer` expects lit.x in 0.035–0.065.
 - CLI parser fixed: `parseArgs` called its `value()` lambda twice (each call bumps the arg index, so every option value was skipped — `--width 320` parsed as 0). Parser moved to `src/cli_args.h`, `--accumulate` branch restored, covered by `tests/test_args.cpp`.
 - CLI strictness fixed: `parseArgs` now rejects non-numeric/overflow values for `--width/--height/--spp/--frames` and negative `--seed` (previously `atoi` silently mapped junk to 0, e.g. `--frames abc` ran forever in PPM mode). `Display::writePPM` returns bool; `main` exits 1 with a diagnostic if a frame can't be written. Covered by extended `test_args` + new `test_display` (toneMap checks + PPM write/read round trip).
 - ctest 7/7 pass: `test_vec3`, `test_box`, `test_camera`, `test_light`, `test_tracer`, `test_args`, `test_display`.
 - PPM smoke check PASS (320x320, 16 spp, camera behind the frame at t≈9.6s, analyzed with `build/smoke_stats.exe`): 2298 bright-red frame px; the cube face facing the frame is lit and red-dominant (maxR≈13 = tone-mapped lit.x≈0.05; ~65% of face px lit, the rest in bar shadow); top face + background black. Re-verified after the CLI/display changes: frames at t_wall 9.3–9.8s show 2600–3700 bright-red px, lit red-dominant cube front, black top face + background boxes. (Note: `smoke_stats` regions are tuned for t≈9.3–9.8s; earlier in the behind-frame window, e.g. t≈9.0s, a frame bar can project into the lower-left "background" region — that is the bar itself, not a lighting leak.)
-- OUTSTANDING: push the follow-up commit (needs VPN + a `public_repo` token).
+- All work pushed to GitHub `main` (through `cc58337`); local and remote in sync. Nothing outstanding.
 
 ## Toolchain notes (this machine)
 
@@ -46,4 +46,4 @@ If the task is complex:
 - **PATH pitfall**: the machine PATH contains `D:\Projects\__tools\mingw_7_2_0\mingw64\bin` (2017-era libgmp/libmpfr/libmpc/libwinpthread + binutils). If `C:\msys64\ucrt64\bin` is not ahead of it on PATH, cc1/cc1plus load the 2017 DLLs and crash at startup with `0xC00000FD`, no diagnostics. `C:\msys64\ucrt64\bin` is first in the **User** PATH (set 2026-10-05).
 - **Stale-session gotcha**: processes started before a PATH change (including this CLI) keep the old PATH. In shell commands, re-derive it first: `$u=[Environment]::GetEnvironmentVariable("Path","User"); $m=[Environment]::GetEnvironmentVariable("Path","Machine"); $env:PATH="$u;$m"`.
 - Backstop: the frontends' own directory (`C:\msys64\ucrt64\lib\gcc\x86_64-w64-mingw32\15.2.0\`) holds staged copies of libwinpthread-1, libgcc_s_seh-1, libgmp-10, libmpfr-6, libmpc-3, libisl-23, zlib1, libzstd. After any msys2 gcc update (new version dir), re-stage them — see `docs/toolchain-incident-2026-10-05.md` section 6.
-- No VPN → msys2 mirrors and GitHub push are unreachable; never plan a fix that requires `pacman -Sy` or a push.
+- Network was down (no VPN) on 2026-10-05 morning but GitHub became reachable later that day (push of `8226713..cc58337` succeeded, see Status). If the network is down again, msys2 mirrors and GitHub push are unreachable — never plan a fix that requires `pacman -Sy` or a push; verify connectivity (`git ls-remote`) first.
