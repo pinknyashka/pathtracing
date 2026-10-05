@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
         return 2;
     }
 
-    const Scene scene;
+    Scene scene;
 
     Display display;
     bool haveWindow = false;
@@ -38,9 +38,15 @@ int main(int argc, char** argv) {
         }
     }
 
+    // Window mode targets real time: low spp + temporal accumulation unless the
+    // user chose otherwise. PPM mode stays deterministic (explicit --accumulate).
+    const int spp = (haveWindow && !args.sppSet) ? 4 : args.spp;
+    const bool accumulate = args.accumulate || (haveWindow && !args.noAccumulate);
+
     const float aspect = (float)args.width / (float)args.height;
     const float fovY = 50.f * kPi / 180.f;
     const float orbitPeriod = 12.f;
+    const Camera cam(Vec3(0, 2, 9), Vec3(0, 0.1f, 0), Vec3(0, 1, 0), aspect, fovY);
 
     std::vector<Vec3> framePx((size_t)args.width * args.height);
     std::vector<Vec3> accum((size_t)args.width * args.height, Vec3(0, 0, 0));
@@ -51,9 +57,10 @@ int main(int argc, char** argv) {
 
     while (!quit) {
         const auto t0 = std::chrono::steady_clock::now();
-        const double tSec = std::chrono::duration<double>(t0 - tStart).count();
-        const float angle = (float)(2.0 * kPi * (tSec / orbitPeriod));
-        const Camera cam = Camera::orbit(angle, 5.f, 2.f, fovY, aspect);
+        const double tWall = std::chrono::duration<double>(t0 - tStart).count();
+        const double tAnim = (args.time >= 0.0) ? args.time : tWall;
+        const float angle = (float)(2.0 * kPi * (tAnim / orbitPeriod));
+        scene.setFrameAngle(angle);
 
         for (auto& p : framePx) p = Vec3(0, 0, 0);
 
@@ -64,12 +71,12 @@ int main(int argc, char** argv) {
             Engine rowEngine(scene, args.seed + (unsigned)(y * 7919 + (n % 1000003) * 104729));
             for (int x = 0; x < args.width; ++x) {
                 Vec3 c(0, 0, 0);
-                for (int s = 0; s < args.spp; ++s) {
+                for (int s = 0; s < spp; ++s) {
                     c = c + rowEngine.pixelColor(cam, x, y, args.width, args.height);
                 }
-                c = c * (1.f / (float)args.spp);
+                c = c * (1.f / (float)spp);
                 const size_t i = (size_t)(args.height - 1 - y) * args.width + x;
-                if (args.accumulate) {
+                if (accumulate) {
                     c = accum[i] * 0.6f + c * 0.4f;
                     accum[i] = c;
                 }
@@ -98,7 +105,7 @@ int main(int argc, char** argv) {
         const double ms =
             std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         std::fprintf(stderr, "frame %lld: %dx%d @ %d spp  %.1f ms (%.1f fps)\n",
-                     (long long)n + 1, args.width, args.height, args.spp, ms, ms > 0 ? 1000.0 / ms : 0.0);
+                     (long long)n + 1, args.width, args.height, spp, ms, ms > 0 ? 1000.0 / ms : 0.0);
         ++n;
         if (args.frames > 0 && (long long)args.frames <= n) break;
     }

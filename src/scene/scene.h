@@ -3,6 +3,7 @@
 #include <random>
 #include <vector>
 
+#include "../math/mat3.h"
 #include "../math/vec3.h"
 #include "geometry.h"
 #include "material.h"
@@ -12,13 +13,27 @@ struct Scene {
     static constexpr float kFrameHalf = 1.0f;
     static constexpr float kFrameT = 0.06f;
 
-    Material cubeMat = Material::diffuse({0.75f, 0.75f, 0.80f});
+    Material cubeMat = Material::diffuse({0.9f, 0.9f, 0.9f});
     Material frameMat = Material::emissive({4.0f, 0.18f, 0.12f});
 
     std::vector<std::unique_ptr<Box>> boxes;
     float barArea[4] = {0.f, 0.f, 0.f, 0.f};
     float lightArea = 0.f;
     Vec3 lightNormal{0, 0, 1};
+    float frameAngle = 0.f;
+    Mat3 frameR = Mat3::identity();
+
+    // Rotates the frame (and its light) about the world Y axis through the origin.
+    // The cube keeps the identity transform. Call on the main thread before rendering
+    // a frame; the scene is read-only while the parallel pass runs.
+    void setFrameAngle(float a) {
+        frameAngle = a;
+        frameR = Mat3::rotY(a);
+        for (auto& b : boxes) {
+            if (b->mat == &frameMat) b->R = frameR;
+        }
+        lightNormal = frameR.mul(Vec3(0, 0, 1));
+    }
 
     Scene() {
         const float h = kFrameHalf, t = kFrameT;
@@ -34,6 +49,7 @@ struct Scene {
         addBar(3, h - t, -h + t, h, h - t);
 
         boxes.emplace_back(std::make_unique<Box>(Vec3(-0.5f, -0.5f, -0.5f), Vec3(0.5f, 0.5f, 0.5f), cubeMat));
+        setFrameAngle(0.f);
     }
 
     Vec3 sampleLightPoint(std::mt19937& rng) const {
@@ -53,6 +69,6 @@ struct Scene {
             case 2: x = -h + t * u0; y = -h + t + (2.f * h - 2.f * t) * u1; break;
             default: x = h - t + t * u0; y = -h + t + (2.f * h - 2.f * t) * u1; break;
         }
-        return Vec3(x, y, kFrameZ + 0.5f * t);
+        return frameR.mul(Vec3(x, y, kFrameZ + 0.5f * t));
     }
 };

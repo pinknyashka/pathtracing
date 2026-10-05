@@ -32,8 +32,15 @@ function(add_tracer_target name)
         target_link_libraries(${name} PRIVATE OpenMP::OpenMP_CXX)
     endif()
     if(SDL2_FOUND)
-        target_link_libraries(${name} PRIVATE SDL2)
-        target_compile_definitions(${name} PRIVATE PATHTRACER_HAS_SDL)
+        # The static SDL2 install config omits INTERFACE include dirs, so add the
+        # prefix include path explicitly. SDL_MAIN_HANDLED: our main() calls
+        # SDL_Init itself, so libSDL2main.a is not needed.
+        target_link_libraries(${name} PRIVATE SDL2::SDL2)
+        target_include_directories(${name} PRIVATE "${SDL2_INCLUDE_DIR}")
+        if(WIN32)
+            target_link_libraries(${name} PRIVATE winmm imm32 ole32 oleaut32 version uuid advapi32 setupapi shell32)
+        endif()
+        target_compile_definitions(${name} PRIVATE PATHTRACER_HAS_SDL SDL_MAIN_HANDLED)
     endif()
 endfunction()
 
@@ -43,7 +50,7 @@ add_tracer_target(pathtracer src/main.cpp)
 add_tracer_target(smoke_stats tests/smoke_stats.cpp)
 
 enable_testing()
-foreach(t IN ITEMS vec3 box camera light tracer args display)
+foreach(t IN ITEMS vec3 box camera light scene tracer args display)
     add_tracer_target(test_${t} tests/test_${t}.cpp)
     target_include_directories(test_${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     add_test(NAME test_${t} COMMAND test_${t})

@@ -134,5 +134,54 @@ int main() {
         CHECK(b.width == 128);
     }
 
+    // 13. --time (M2): floating-point value, default -1 (follow the wall clock),
+    //     negative values rejected.
+    {
+        Args a;
+        CHECK(runArgs({"--time", "6"}, a));
+        CHECK_NEAR(a.time, 6.0, 1e-12);
+        Args b;
+        CHECK(runArgs({"--time", "0.5"}, b));
+        CHECK_NEAR(b.time, 0.5, 1e-12);
+        Args c;
+        CHECK(runArgs({}, c));
+        CHECK(c.time == -1.0);
+    }
+
+    // 14. --time rejects negative values, non-numeric values, trailing junk, and
+    //     a missing value.
+    {
+        Args a;
+        CHECK(!runArgs({"--time", "-1"}, a));
+        CHECK(!runArgs({"--time", "abc"}, a));
+        CHECK(!runArgs({"--time", "1.5x"}, a));
+        CHECK(!runArgs({"--time"}, a));
+    }
+
+    // 15. --no-accumulate flag: default false, true when passed; combining it
+    //     with --accumulate is a conflict.
+    {
+        Args a;
+        CHECK(runArgs({}, a));
+        CHECK(!a.noAccumulate);
+        Args b;
+        CHECK(runArgs({"--no-accumulate"}, b));
+        CHECK(b.noAccumulate);
+        Args c;
+        CHECK(!runArgs({"--accumulate", "--no-accumulate"}, c));
+    }
+
+    // 16. sppSet records whether --spp was given explicitly.
+    {
+        Args a;
+        CHECK(runArgs({}, a));
+        CHECK(!a.sppSet);
+        CHECK(a.spp == 8);
+        Args b;
+        CHECK(runArgs({"--spp", "16"}, b));
+        CHECK(b.sppSet);
+        CHECK(b.spp == 16);
+    }
+
     return checkFinish();
 }

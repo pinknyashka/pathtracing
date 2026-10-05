@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 
+#include "../math/mat3.h"
 #include "../math/vec3.h"
 #include "material.h"
 
@@ -21,12 +22,19 @@ class Box : public Primitive {
 public:
     Vec3 mn{0, 0, 0}, mx{0, 0, 0};
     const Material* mat = nullptr;
+    // Rigid transform (rotation + translation). Identity by default, in which case
+    // the box is axis-aligned as in the M1 layout. t is preserved exactly (no scale).
+    Mat3 R = Mat3::identity();
+    Vec3 T{0, 0, 0};
 
     Box(const Vec3& min, const Vec3& max, const Material& m) : mn(min), mx(max), mat(&m) {}
 
     bool intersect(const Ray& r, float tmin, float tmax, Hit& out) const override {
-        const float o[3] = {r.origin.x, r.origin.y, r.origin.z};
-        const float d[3] = {r.dir.x, r.dir.y, r.dir.z};
+        const Mat3 Rt = R.transpose();
+        const Vec3 ol = Rt.mul(r.origin - T);
+        const Vec3 dl = Rt.mul(r.dir);
+        const float o[3] = {ol.x, ol.y, ol.z};
+        const float d[3] = {dl.x, dl.y, dl.z};
         const float lo[3] = {mn.x, mn.y, mn.z};
         const float hi[3] = {mx.x, mx.y, mx.z};
 
@@ -67,8 +75,9 @@ public:
                 }
             }
         }
-        out.point = r.at(out.t);
-        out.normal = n;
+        const Vec3 pl = Vec3(o[0], o[1], o[2]) + Vec3(d[0], d[1], d[2]) * out.t;
+        out.point = R.mul(pl) + T;
+        out.normal = R.mul(n);
         out.material = mat;
         return true;
     }

@@ -55,7 +55,7 @@ struct Display {
     }
 
     void present(const std::vector<Vec3>& px, int w, int h) {
-        std::vector<std::uint32_t> buf((size_t)w * h);
+        if ((int)buf.size() < w * h) buf.resize((size_t)w * h);
         for (size_t i = 0; i < (size_t)w * h; ++i) {
             std::uint8_t r, g, b;
             toneMap(px[i], r, g, b);
@@ -79,5 +79,6 @@ struct Display {
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* texture = nullptr;
     bool open = false;
+    std::vector<std::uint32_t> buf;  // ARGB staging, reused across presents
 #endif
 };
