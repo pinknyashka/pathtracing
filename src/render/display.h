@@ -22,9 +22,9 @@ struct Display {
         r = f(c.x); g = f(c.y); b = f(c.z);
     }
 
-    static void writePPM(const std::string& path, int w, int h, const std::vector<Vec3>& px) {
+    static bool writePPM(const std::string& path, int w, int h, const std::vector<Vec3>& px) {
         std::ofstream f(path, std::ios::binary);
-        if (!f) return;
+        if (!f) return false;
         f << "P6\n" << w << " " << h << "\n255\n";
         std::vector<char> row((size_t)w * 3);
         for (int y = 0; y < h; ++y) {
@@ -37,6 +37,7 @@ struct Display {
             }
             f.write(row.data(), (std::streamsize)row.size());
         }
+        return f.good();
     }
 
 #ifdef PATHTRACER_HAS_SDL

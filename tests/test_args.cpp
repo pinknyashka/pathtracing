@@ -110,5 +110,29 @@ int main() {
         CHECK(!runArgs({"--width", "320", "--bogus"}, a));
     }
 
+    // 11. Strict numeric parsing: non-numeric, trailing junk, overflow, and a
+    //     negative seed are all rejected.
+    {
+        Args a;
+        CHECK(!runArgs({"--spp", "abc"}, a));
+        CHECK(!runArgs({"--frames", "abc"}, a));
+        CHECK(!runArgs({"--seed", "abc"}, a));
+        CHECK(!runArgs({"--width", "3.5"}, a));
+        CHECK(!runArgs({"--width", "12x"}, a));
+        CHECK(!runArgs({"--width", "99999999999"}, a));  // overflow
+        CHECK(!runArgs({"--seed", "-1"}, a));
+    }
+
+    // 12. Guards against over-strictness: plain and leading-'+' integers are
+    //     still accepted (strtol semantics).
+    {
+        Args a;
+        CHECK(runArgs({"--width", "128"}, a));
+        CHECK(a.width == 128);
+        Args b;
+        CHECK(runArgs({"--width", "+128"}, b));
+        CHECK(b.width == 128);
+    }
+
     return checkFinish();
 }

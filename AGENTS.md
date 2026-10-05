@@ -25,17 +25,19 @@ You are the lead coordinating agent (Plan/Build mode) powered by Qwen. Your task
 If the task is complex:
 1. Create a high-level plan.
 2. Delegate test writing to the sub-agent by sending a command in this format: `call @tester to generate tests for src/auth.py`.
-3. Wait for the sub-agent's response, analyze the result, and conclude the session.
+3. If you lack information about external libraries, frameworks, or existing codebase architecture, delegate the research to @scout before generating code.
+4. Wait for the sub-agent's response, analyze the result, and conclude the session.
 
-## Status (as of 2026-10-05, after PPM smoke check)
+## Status (as of 2026-10-05, after CLI hardening + display tests)
 
 - Repo at https://github.com/pinknyashka/pathtracing (public; first commit pushed, follow-up commit pending push); local `origin` = that URL.
   - Push with a token that has `public_repo`/`repo` scope (a read-only token gets 403): `git -c credential.helper= push https://x-access-token:<TOKEN>@github.com/pinknyashka/pathtracing.git main` — the `credential.helper=` override stops the token being saved to Windows Credential Manager.
 - Toolchain blocker RESOLVED offline (no msys2 package changes): `D:\Projects\__tools\mingw_7_2_0` on the machine PATH shadowed ucrt64's runtime DLLs, so gcc-15 frontends crashed at startup with `0xC00000FD`. Fix: User PATH now starts with `C:\msys64\ucrt64\bin`, plus 8 DLLs staged next to cc1/cc1plus. Full report + prevention runbook: `docs/toolchain-incident-2026-10-05.md`.
 - NEE self-blocking fixed in `src/render/tracer.h`: the visibility test now skips emissive boxes (it used to block on the sampled bar's own front face), and the emission contribution uses `cosEmit/d²`. Verified with a 1024-spp probe: lit.x=0.0503, shadow=0.0, framePix=(4.0, 0.18, 0.12); `test_tracer` expects lit.x in 0.035–0.065.
 - CLI parser fixed: `parseArgs` called its `value()` lambda twice (each call bumps the arg index, so every option value was skipped — `--width 320` parsed as 0). Parser moved to `src/cli_args.h`, `--accumulate` branch restored, covered by `tests/test_args.cpp`.
-- ctest 6/6 pass: `test_vec3`, `test_box`, `test_camera`, `test_light`, `test_tracer`, `test_args`.
-- PPM smoke check PASS (320x320, 16 spp, camera behind the frame at t≈9.6s, analyzed with `build/smoke_stats.exe`): 2298 bright-red frame px; the cube face facing the frame is lit and red-dominant (maxR≈13 = tone-mapped lit.x≈0.05; ~65% of face px lit, the rest in bar shadow); top face + background black.
+- CLI strictness fixed: `parseArgs` now rejects non-numeric/overflow values for `--width/--height/--spp/--frames` and negative `--seed` (previously `atoi` silently mapped junk to 0, e.g. `--frames abc` ran forever in PPM mode). `Display::writePPM` returns bool; `main` exits 1 with a diagnostic if a frame can't be written. Covered by extended `test_args` + new `test_display` (toneMap checks + PPM write/read round trip).
+- ctest 7/7 pass: `test_vec3`, `test_box`, `test_camera`, `test_light`, `test_tracer`, `test_args`, `test_display`.
+- PPM smoke check PASS (320x320, 16 spp, camera behind the frame at t≈9.6s, analyzed with `build/smoke_stats.exe`): 2298 bright-red frame px; the cube face facing the frame is lit and red-dominant (maxR≈13 = tone-mapped lit.x≈0.05; ~65% of face px lit, the rest in bar shadow); top face + background black. Re-verified after the CLI/display changes: frames at t_wall 9.3–9.8s show 2600–3700 bright-red px, lit red-dominant cube front, black top face + background boxes. (Note: `smoke_stats` regions are tuned for t≈9.3–9.8s; earlier in the behind-frame window, e.g. t≈9.0s, a frame bar can project into the lower-left "background" region — that is the bar itself, not a lighting leak.)
 - OUTSTANDING: push the follow-up commit (needs VPN + a `public_repo` token).
 
 ## Toolchain notes (this machine)

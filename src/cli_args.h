@@ -1,4 +1,5 @@
 #pragma once
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -26,6 +27,25 @@ static void usage() {
         "  --help        this text\n");
 }
 
+// Parses a full, in-range base-10 integer (no trailing junk, no overflow).
+static bool parseLong(const char* s, long& out) {
+    if (!s || !*s) return false;
+    errno = 0;
+    char* end = nullptr;
+    const long v = std::strtol(s, &end, 10);
+    if (errno == ERANGE || end == s || *end != '\0') return false;
+    out = v;
+    return true;
+}
+
+static bool valueArg(const char* opt, const char* v, long& out) {
+    if (!parseLong(v, out)) {
+        std::fprintf(stderr, "invalid value for %s: %s\n", opt, v);
+        return false;
+    }
+    return true;
+}
+
 // Returns false on unknown/malformed arguments. --help prints usage and exits 0.
 static bool parseArgs(int argc, char** argv, Args& a) {
     for (int i = 1; i < argc; ++i) {
@@ -35,11 +55,17 @@ static bool parseArgs(int argc, char** argv, Args& a) {
             return argv[++i];
         };
         const char* v;
-        if (s == "--width") { v = value(); if (!v) return false; a.width = std::atoi(v); }
-        else if (s == "--height") { v = value(); if (!v) return false; a.height = std::atoi(v); }
-        else if (s == "--spp") { v = value(); if (!v) return false; a.spp = std::atoi(v); }
-        else if (s == "--frames") { v = value(); if (!v) return false; a.frames = std::atoi(v); }
-        else if (s == "--seed") { v = value(); if (!v) return false; a.seed = (unsigned)std::atoi(v); }
+        long n = 0;
+        if (s == "--width") { v = value(); if (!v) return false; if (!valueArg(s.c_str(), v, n)) return false; a.width = (int)n; }
+        else if (s == "--height") { v = value(); if (!v) return false; if (!valueArg(s.c_str(), v, n)) return false; a.height = (int)n; }
+        else if (s == "--spp") { v = value(); if (!v) return false; if (!valueArg(s.c_str(), v, n)) return false; a.spp = (int)n; }
+        else if (s == "--frames") { v = value(); if (!v) return false; if (!valueArg(s.c_str(), v, n)) return false; a.frames = (int)n; }
+        else if (s == "--seed") {
+            v = value(); if (!v) return false;
+            if (!valueArg(s.c_str(), v, n)) return false;
+            if (n < 0) { std::fprintf(stderr, "seed must be non-negative\n"); return false; }
+            a.seed = (unsigned)n;
+        }
         else if (s == "--out") { v = value(); if (!v) return false; a.out = v; }
         else if (s == "--accumulate") a.accumulate = true;
         else if (s == "--help" || s == "-h") { usage(); std::exit(0); }

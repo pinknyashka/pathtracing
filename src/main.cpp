@@ -89,7 +89,10 @@ int main(int argc, char** argv) {
         {
             char name[512];
             std::snprintf(name, sizeof(name), "%s/frame_%04lld.ppm", ppmDir.c_str(), (long long)n + 1);
-            display.writePPM(name, args.width, args.height, framePx);
+            if (!display.writePPM(name, args.width, args.height, framePx)) {
+                std::fprintf(stderr, "pathtracer: failed to write %s\n", name);
+                return 1;
+            }
         }
 
         const double ms =
