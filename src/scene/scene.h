@@ -18,6 +18,7 @@ struct Scene {
     std::vector<std::unique_ptr<Box>> boxes;
     float barArea[4] = {0.f, 0.f, 0.f, 0.f};
     float lightArea = 0.f;
+    Vec3 lightNormal{0, 0, 1};
 
     Scene() {
         const float h = kFrameHalf, t = kFrameT;

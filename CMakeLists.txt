@@ -39,8 +39,11 @@ endfunction()
 
 add_tracer_target(pathtracer src/main.cpp)
 
+# PPM region stats helper for the smoke check (see AGENTS.md); not a test.
+add_tracer_target(smoke_stats tests/smoke_stats.cpp)
+
 enable_testing()
-foreach(t IN ITEMS vec3 box camera light tracer)
+foreach(t IN ITEMS vec3 box camera light tracer args)
     add_tracer_target(test_${t} tests/test_${t}.cpp)
     target_include_directories(test_${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
     add_test(NAME test_${t} COMMAND test_${t})

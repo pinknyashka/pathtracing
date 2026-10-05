@@ -22,7 +22,8 @@ int main() {
     const Camera camShadow(Vec3(0, 0, 7), Vec3(0, 0, 0), Vec3(0, 1, 0), 1.0f, fovY);
 
     const Vec3 lit = average(scene, camLit, 0.5f, 0.5f, 32, 11);
-    CHECK(lit.x > 0.2f);
+    CHECK(lit.x > 0.035f);
+    CHECK(lit.x < 0.065f);
     CHECK(lit.x > 3.0f * std::max(lit.y, lit.z));
 
     const Vec3 shadow = average(scene, camShadow, 0.5f, 0.5f, 32, 12);

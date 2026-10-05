@@ -5,57 +5,12 @@
 #include <string>
 #include <vector>
 
+#include "cli_args.h"
 #include "math/vec3.h"
 #include "render/display.h"
 #include "render/tracer.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
-
-struct Args {
-    int width = 960;
-    int height = 540;
-    int spp = 8;
-    int frames = 0;
-    unsigned seed = 12345;
-    std::string out;
-    bool accumulate = false;
-};
-
-static void usage() {
-    std::printf(
-        "pathtracer [options]\n"
-        "  --width N     frame width (default 960)\n"
-        "  --height N    frame height (default 540)\n"
-        "  --spp N       samples per pixel (default 8)\n"
-        "  --frames N    frames to render, 0 = run until closed/Ctrl+C (default 0)\n"
-        "  --seed N      RNG seed (default 12345)\n"
-        "  --out DIR     write PPM frames to DIR instead of the window\n"
-        "  --accumulate  temporal exponential blend to smooth noise\n"
-        "  --help        this text\n");
-}
-
-static bool parseArgs(int argc, char** argv, Args& a) {
-    for (int i = 1; i < argc; ++i) {
-        const std::string s = argv[i];
-        auto value = [&]() -> const char* {
-            if (i + 1 >= argc) return nullptr;
-            return argv[++i];
-        };
-        if (s == "--width") { if (!value()) return false; a.width = std::atoi(value()); }
-        else if (s == "--height") { if (!value()) return false; a.height = std::atoi(value()); }
-        else if (s == "--spp") { if (!value()) return false; a.spp = std::atoi(value()); }
-        else if (s == "--frames") { if (!value()) return false; a.frames = std::atoi(value()); }
-        else if (s == "--seed") { if (!value()) return false; a.seed = (unsigned)std::atoi(value()); }
-        else if (s == "--out") { if (!value()) return false; a.out = value(); }
-        else if (s == "--accumulate") a.accumulate = true;
-        else if (s == "--help" || s == "-h") { usage(); std::exit(0); }
-        else { std::fprintf(stderr, "unknown argument: %s\n", s.c_str()); return false; }
-    }
-    if (a.width < 4 || a.height < 4) { std::fprintf(stderr, "width/height too small\n"); return false; }
-    if (a.spp < 1) a.spp = 1;
-    if (a.frames < 0) a.frames = 0;
-    return true;
-}
 
 int main(int argc, char** argv) {
     Args args;

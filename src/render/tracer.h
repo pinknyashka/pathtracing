@@ -46,7 +46,8 @@ public:
             if (!any) break;
 
             if (hit.material->type == MaterialType::Emissive) {
-                acc = acc + scale * hit.material->emission;
+                if (bounce == 0)
+                    acc = acc + scale * hit.material->emission;
                 break;
             }
 
@@ -60,14 +61,17 @@ public:
                 const Vec3 ld = toL * (1.f / dist);
                 const float cosL = hit.normal.dot(ld);
                 if (cosL <= 0.f) continue;
+                const float cosEmit = (-ld).dot(scene.lightNormal);
+                if (cosEmit <= 0.f) continue;
                 const Ray vis{hit.point + hit.normal * 1e-3f, ld};
                 bool blocked = false;
                 for (const auto& b : scene.boxes) {
+                    if (b->mat->type == MaterialType::Emissive) continue;
                     Hit h;
                     if (b->intersect(vis, 1e-3f, dist - 1e-3f, h)) { blocked = true; break; }
                 }
                 if (!blocked) {
-                    nee = nee + scene.frameMat.emission * cosL;
+                    nee = nee + scene.frameMat.emission * cosL * cosEmit * (1.f / (dist * dist));
                 }
             }
             nee = nee * (invPdf / (kPi * (float)kVisSamples));
