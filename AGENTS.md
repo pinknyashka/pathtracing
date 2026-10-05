@@ -12,6 +12,7 @@
 - Tracer correctness relies on next-event estimation sampling the frame directly — a thin frame is rarely hit by random bounces; don't remove NEE.
 - Before declaring the renderer correct, run the full ctest suite plus a PPM smoke check. Deterministic recipe (static camera, no timing race): `pathtracer --width 320 --height 320 --spp 32 --frames 1 --time 6.0 --out smoke2` then `smoke_stats smoke2/frame_0001.ppm` — at t=6 s the ring is at θ=180° (z=+3, between camera and cube): expect bright-red ring bands/bars (≈1700 brightRed px), `cube front` lit and red-dominant (avgR≈14, all px lit), and all four background corner boxes black (0.00).
 - Keep this file updated as the build system, compiler flags, and test setup are finalized.
+- Todo discipline: maintain a session todo list and update it every time a subgoal is finished — mark a task `in_progress` before starting it and `completed` as soon as it is verified. Never batch status updates at the end of a session.
 
 # Task Distribution Matrix (Routing Contract)
 
