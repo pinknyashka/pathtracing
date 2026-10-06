@@ -1,8 +1,10 @@
 // One-shot PPM region statistics for the smoke check in AGENTS.md.
 // Usage: smoke_stats <frame.ppm>
-// Region boxes are tuned for the 320x320 static-camera layout at --time 6.0
-// (frame ring at z=+3, between camera at (0,2,9) and the cube): bright-red
-// top/bottom bands and left/right bars around the lit cube face, black corners.
+// Region boxes are tuned for the 320x320 static-camera layout at --time 0.0
+// (face-on: ring plane at z=0 centered on the cube center, camera at (0,2,9)):
+// bright-red top/bottom bands and left/right bars around the cube; the cube's
+// front face is unlit (equatorial ring) and only the front half of its top
+// face is lit red; black corners.
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -96,11 +98,11 @@ int main(int argc, char** argv) {
     std::printf("%s  %dx%d  pixels=%zu\n", argv[1], p.w, p.h, total);
     std::printf("brightRed(r>150,g<100,b<100) = %d  (%.1f%%)\n", brightRed, 100.0 * brightRed / total);
     std::printf("dark(r<4,g<4,b<4)             = %d  (%.1f%%)\n", dark, 100.0 * dark / total);
-    print("ring top band  (x105..212 y145..148)", region(p, 105, 213, 145, 149));
-    print("ring bottom band(x107..211 y246..249)", region(p, 107, 212, 246, 250));
-    print("ring left bar  (x103..108 y160..240)", region(p, 103, 109, 160, 241));
-    print("ring right bar (x210..216 y160..240)", region(p, 210, 217, 160, 241));
-    print("cube front (x146..175 y152..183)", region(p, 146, 176, 152, 184));
+    print("ring top band  (x125..194 y126..128)", region(p, 125, 195, 126, 129));
+    print("ring bottom band(x126..193 y197..199)", region(p, 126, 194, 197, 200));
+    print("ring left bar  (x122..124 y135..190)", region(p, 122, 125, 135, 191));
+    print("ring right bar (x195..197 y135..190)", region(p, 195, 198, 135, 191));
+    print("cube top (x145..175 y146..148)", region(p, 145, 176, 146, 149));
     print("bg upper-left  (x20..80 y20..80)", region(p, 20, 81, 20, 81));
     print("bg upper-right (x240..300 y20..80)", region(p, 240, 301, 20, 81));
     print("bg lower-left  (x20..80 y270..310)", region(p, 20, 81, 270, 311));

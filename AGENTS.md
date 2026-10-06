@@ -1,6 +1,6 @@
 # AGENTS.md
 
-- Project: CPU path tracer in C++20, built with CMake. Scene: white unit cube (Lambertian) at the origin + a thin 2×2 red emissive square frame (4 transformed boxes, ring plane at local `z = -3`) rotating about the world Y axis (12 s period); static camera at `(0, 2, 9)` looking at the origin. Frame bars are OBBs: `Box` carries a rigid transform (`Mat3 R`, `Vec3 T`); `Scene::setFrameAngle(θ)` drives the rotation.
+- Project: CPU path tracer in C++20, built with CMake. Scene: white unit cube (Lambertian) at the origin + a thin 2×2 red emissive square frame (4 transformed boxes, ring plane at local `z = 0`, i.e. centered on the cube center — an equatorial ring) pitching about the world X axis (12 s period); static camera at `(0, 2, 9)` looking at the origin. Frame bars are OBBs: `Box` carries a rigid transform (`Mat3 R`, `Vec3 T`); `Scene::setFrameAngle(θ)` drives the pitch (`R = Mat3::rotX(θ)`).
 - Everything is computed on CPU by design — no GPU shaders/hardware acceleration. Frame-rate drops at high `--spp`/`--res` are expected, not bugs.
 - SDL2 is an optional dependency: if `find_package(SDL2)` fails, the renderer must fall back to writing PPM frames to `frames/`. Don't assume a window will open.
 - Build: out-of-source `build/` (never commit it).
@@ -10,7 +10,7 @@
 - Layout: `src/math` (Vec3/Ray), `src/scene` (geometry, materials, camera), `src/render` (tracer, display), `tests/`, `src/main.cpp` (CLI + animation loop).
 - Radiance is HDR through the tracer (emission > 1.0); tone-map/clamp only at display or PPM write time.
 - Tracer correctness relies on next-event estimation sampling the frame directly — a thin frame is rarely hit by random bounces; don't remove NEE.
-- Before declaring the renderer correct, run the full ctest suite plus a PPM smoke check. Deterministic recipe (static camera, no timing race): `pathtracer --width 320 --height 320 --spp 32 --frames 1 --time 6.0 --out smoke2` then `smoke_stats smoke2/frame_0001.ppm` — at t=6 s the ring is at θ=180° (z=+3, between camera and cube): expect bright-red ring bands/bars (≈1700 brightRed px), `cube front` lit and red-dominant (avgR≈14, all px lit), and all four background corner boxes black (0.00).
+- Before declaring the renderer correct, run the full ctest suite plus a PPM smoke check. Deterministic recipe (static camera, no timing race): `pathtracer --width 320 --height 320 --spp 32 --frames 1 --time 0.0 --out smoke3` then `smoke_stats smoke3/frame_0001.ppm` — at t=0 s the equatorial ring is face-on (θ=0, ring plane at z=0 through the cube center): expect bright-red ring top/bottom bands + side bars (≈830 brightRed px), the cube's **top** face lit and red-dominant (avgR≈15, all px lit; the front face is unlit by the equatorial ring), and all four background corner boxes black (0.00).
 - Keep this file updated as the build system, compiler flags, and test setup are finalized.
 - Todo discipline: maintain a session todo list and update it every time a subgoal is finished — mark a task `in_progress` before starting it and `completed` as soon as it is verified. Never batch status updates at the end of a session.
 
@@ -29,7 +29,7 @@ If the task is complex:
 3. If you lack information about external libraries, frameworks, or existing codebase architecture, delegate the research to @scout before generating code.
 4. Wait for the sub-agent's response, analyze the result, and conclude the session.
 
-## Status (as of 2026-10-05, after Milestone 2: windowed real-time + rotating frame)
+## Status (as of 2026-10-06, Milestone 3: equatorial ring pitching about X — in progress)
 
 - Repo at https://github.com/pinknyashka/pathtracing (public); local `origin` = that URL. Remote `main` is in sync with local (through the Milestone-2 commit `6b7d5a8`).
   - Push: a plain `git push origin main` works — Windows Credential Manager holds a GitHub credential for `pinknyashka` with push scope (pushed `f8d5c72..6b7d5a8` on 2026-10-05 without an explicit token). Fallback if that credential expires: push with a token that has `public_repo`/`repo` scope (a read-only token gets 403): `git -c credential.helper= push https://x-access-token:<TOKEN>@github.com/pinknyashka/pathtracing.git main` — the `credential.helper=` override stops the token being saved to Windows Credential Manager.
@@ -54,6 +54,37 @@ If the task is complex:
 - SDL2 local prefix was built (W1 finished): `third_party/sdl2` (static, video-only; logs `third_party/sdl2-{configure,build,install}.log`). CMake links `SDL2::SDL2` + the prefix include dir explicitly (the static install config exports no include dirs) + `SDL_MAIN_HANDLED` (our `main` calls `SDL_Init` itself, so libSDL2main.a is not linked) + win32 libs (`winmm imm32 ole32 ...`).
 - ctest 8/8: `test_vec3`, `test_box` (OBB rotation cases: Y-45/Y-90, Z-90, T+R, identity equivalence), `test_camera`, `test_light`, `test_scene` (new: ring sampling on the rotated plane for θ ∈ {0°,90°,180°}, lightArea/lightNormal invariance), `test_tracer` (re-anchored to the static camera: LIT θ=π center-pixel lit.x≈0.060 ∈ [0.05,0.07] red-dominant; SHADOW θ=0 exactly 0.0; FRAME direct ray = exact emission (4.0, 0.18, 0.12)), `test_args` (`--time`, `--no-accumulate`, `sppSet`), `test_display`.
 - Smoke v2 PASS (320×320 @ 32 spp, `--time 6.0`, seed-robust): 1740 bright-red px; ring top/bottom bands avgR≈204, side bars ≈125–130; cube front avgR=14.3/avgG=1.0 (all 960 region px lit, red-dominant); all four background corners exactly black. `smoke_stats` regions retuned for the static layout (bands y≈145–149/246–250, bars x≈103–108/210–216).
+
+## Milestone 3 (in progress, 2026-10-06): equatorial ring — frame centered on the cube, pitching about X
+
+- Goal: the 2×2 red emissive frame becomes an **equatorial ring** — its plane passes through
+  the **cube center** (`kFrameZ: -3.0 → 0.0`, ring center == cube center == pitch pivot at the
+  origin) and it **pitches about the world X axis** (`setFrameAngle` now sets
+  `R = Mat3::rotX(θ)`, new `Mat3::rotX`), 12 s period. With the static camera at `(0, 2, 9)`
+  the red square hoop wobbles up and down around the white cube (face-on to camera at t = 0 /
+  t = 12 s, vertical at t = 3 / 9 s, inverted at t = 6 s). Full plan: `docs/plan-equatorial-pitch.md`.
+- NEE needed no formula change: `lightNormal`/`sampleLightPoint` already track `frameR`;
+  `lightArea` is rotation-invariant; with `kFrameZ = 0` the ring is centered on the pivot so
+  the plane test stays rotation-invariant.
+- Lighting consequence at θ = 0 (face-on): the camera-facing +z face is **unlit** (every ring
+  point has z < 0.5 ⇒ cosL < 0; cosine bounces stay in the +z hemisphere and can't reach the
+  ring) → the center pixel is exactly 0; the **top face** is lit red-dominant by the top bar
+  (its front half, z > 0.03).
+- Tests re-anchored: `test_scene` `lightNormal` = `rotX(θ)·(0,0,1) = (0,−sinθ,cosθ)`;
+  `test_tracer` LIT = top-face pixel (s=0.5, t=0.54003608), lit.x ∈ [0.06,0.14] + exact
+  channel ratios y/x=0.045, z/x=0.03 (close-range NEE estimator is heavy-tailed, ~17 % sd);
+  SHADOW = center pixel exactly 0.0; FRAME = ray to top-bar front face `(0,0.97,+0.03)` →
+  exact emission (4.0,0.18,0.12).
+- ctest 8/8 pass. Smoke v3 PASS (320×320 @ 32 spp, `--time 0.0`, seed-robust): 828
+  bright-red px; ring top/bottom bands avgR≈193–195 (all region px lit, maxR 204 = clamped
+  HDR); side bars avgR≈171–172; **cube top** avgR=15.4/avgG=0.8 (all 93 region px lit,
+  red-dominant); all four background corners exactly black. `smoke_stats` regions retuned
+  for the face-on layout (bands y≈126–128/197–199, bars x≈122–124/195–197, cube top
+  y≈146–148). `smoke3/` added to `.gitignore`.
+- Pending: window-mode acceptance (visual, user-confirmed) + milestone commit + push (on
+  request). Working-tree changes: `src/main.cpp`, `src/math/mat3.h`, `src/scene/scene.h`,
+  `tests/smoke_stats.cpp`, `tests/test_scene.cpp`, `tests/test_tracer.cpp`, `AGENTS.md`,
+  `README.md`, `docs/plan-equatorial-pitch.md`, `.gitignore`.
 
 ## Toolchain notes (this machine)
 

@@ -23,4 +23,10 @@ struct Mat3 {
         const float c = std::cos(a), s = std::sin(a);
         return Mat3(Vec3(c, 0, -s), Vec3(0, 1, 0), Vec3(s, 0, c));
     }
+
+    // Rotation by a radians about the X axis (right-handed rule).
+    static Mat3 rotX(float a) {
+        const float c = std::cos(a), s = std::sin(a);
+        return Mat3(Vec3(1, 0, 0), Vec3(0, c, s), Vec3(0, -s, c));
+    }
 };

@@ -2,5 +2,6 @@ build/
 frames/
 smoke/
 smoke2/
+smoke3/
 third_party/
 *.ppm

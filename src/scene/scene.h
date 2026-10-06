@@ -9,7 +9,8 @@
 #include "material.h"
 
 struct Scene {
-    static constexpr float kFrameZ = -3.0f;
+    // Ring plane passes through the cube center (frame center == cube center == pivot).
+    static constexpr float kFrameZ = 0.0f;
     static constexpr float kFrameHalf = 1.0f;
     static constexpr float kFrameT = 0.06f;
 
@@ -23,12 +24,13 @@ struct Scene {
     float frameAngle = 0.f;
     Mat3 frameR = Mat3::identity();
 
-    // Rotates the frame (and its light) about the world Y axis through the origin.
-    // The cube keeps the identity transform. Call on the main thread before rendering
-    // a frame; the scene is read-only while the parallel pass runs.
+    // Pitches the frame (and its light) about the world X axis through the origin
+    // (= cube center = frame center). The cube keeps the identity transform.
+    // Call on the main thread before rendering a frame; the scene is read-only
+    // while the parallel pass runs.
     void setFrameAngle(float a) {
         frameAngle = a;
-        frameR = Mat3::rotY(a);
+        frameR = Mat3::rotX(a);
         for (auto& b : boxes) {
             if (b->mat == &frameMat) b->R = frameR;
         }

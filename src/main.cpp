@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
     const float aspect = (float)args.width / (float)args.height;
     const float fovY = 50.f * kPi / 180.f;
-    const float orbitPeriod = 12.f;
+    const float pitchPeriod = 12.f;
     const Camera cam(Vec3(0, 2, 9), Vec3(0, 0.1f, 0), Vec3(0, 1, 0), aspect, fovY);
 
     std::vector<Vec3> framePx((size_t)args.width * args.height);
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
         const auto t0 = std::chrono::steady_clock::now();
         const double tWall = std::chrono::duration<double>(t0 - tStart).count();
         const double tAnim = (args.time >= 0.0) ? args.time : tWall;
-        const float angle = (float)(2.0 * kPi * (tAnim / orbitPeriod));
+        const float angle = (float)(2.0 * kPi * (tAnim / pitchPeriod));
         scene.setFrameAngle(angle);
 
         for (auto& p : framePx) p = Vec3(0, 0, 0);
