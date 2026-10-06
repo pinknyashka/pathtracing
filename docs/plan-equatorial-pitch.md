@@ -1,8 +1,8 @@
 # Milestone 3 plan: equatorial ring — frame centered on the cube, pitching about X
 
-Date: 2026-10-06. Status: code + tests + smoke done (working tree, not yet committed);
-window acceptance and commit pending. Supersedes the M2 "frame at z = −3 orbiting about Y"
-layout and its smoke recipe v2.
+Date: 2026-10-06. Status: complete (committed `8bc8759`, pushed to `origin main`; see
+AGENTS.md "Milestone 3"). Supersedes the M2 "frame at z = −3 orbiting about Y" layout and
+its smoke recipe v2.
 
 ## Goal
 
@@ -70,8 +70,10 @@ y≈197–199, side bars x≈122–124/195–197, cube top y≈146–148). PASS 
 maxR 204 = clamped HDR); side bars avgR≈171–172; **cube top** avgR = 15.4 / avgG = 0.8
 (all 93 region px lit, red-dominant); all four background corners exactly black (0.00).
 
-## Pending
+## Done
 
-- Window acceptance: run `pathtracer.exe` (no `--out`) → red hoop wobbling about the
-  cube in the SDL window (visual, user-confirmed).
-- Milestone commit + push (on user request).
+- Window acceptance: `pathtracer.exe --frames 2` (no `--out`) opened the SDL window (no
+  PPM fallback), 960×540 @ 4 spp ≈ 35 ms first frame / 23 ms second (≈43 fps), clean
+  exit rc=0 (verified 2026-10-06; the wobble reads visually as a hoop tilting up/down
+  about the horizontal axis).
+- Milestone committed (`8bc8759`) and pushed to `origin main` (2026-10-06).

@@ -29,17 +29,17 @@ If the task is complex:
 3. If you lack information about external libraries, frameworks, or existing codebase architecture, delegate the research to @scout before generating code.
 4. Wait for the sub-agent's response, analyze the result, and conclude the session.
 
-## Status (as of 2026-10-06, Milestone 3: equatorial ring pitching about X — in progress)
+## Status (as of 2026-10-06, after Milestone 3: equatorial ring pitching about X)
 
-- Repo at https://github.com/pinknyashka/pathtracing (public); local `origin` = that URL. Remote `main` is in sync with local (through the Milestone-2 commit `6b7d5a8`).
-  - Push: a plain `git push origin main` works — Windows Credential Manager holds a GitHub credential for `pinknyashka` with push scope (pushed `f8d5c72..6b7d5a8` on 2026-10-05 without an explicit token). Fallback if that credential expires: push with a token that has `public_repo`/`repo` scope (a read-only token gets 403): `git -c credential.helper= push https://x-access-token:<TOKEN>@github.com/pinknyashka/pathtracing.git main` — the `credential.helper=` override stops the token being saved to Windows Credential Manager.
+- Repo at https://github.com/pinknyashka/pathtracing (public); local `origin` = that URL. Remote `main` is in sync with local (through the Milestone-3 commit `8bc8759`).
+  - Push: a plain `git push origin main` works — Windows Credential Manager holds a GitHub credential for `pinknyashka` with push scope (pushed `f8d5c72..6b7d5a8` on 2026-10-05 and `1861242..8bc8759` on 2026-10-06 without an explicit token). Fallback if that credential expires: push with a token that has `public_repo`/`repo` scope (a read-only token gets 403): `git -c credential.helper= push https://x-access-token:<TOKEN>@github.com/pinknyashka/pathtracing.git main` — the `credential.helper=` override stops the token being saved to Windows Credential Manager.
 - Toolchain blocker RESOLVED offline (no msys2 package changes): `D:\Projects\__tools\mingw_7_2_0` on the machine PATH shadowed ucrt64's runtime DLLs, so gcc-15 frontends crashed at startup with `0xC00000FD`. Fix: User PATH now starts with `C:\msys64\ucrt64\bin`, plus 8 DLLs staged next to cc1/cc1plus. Full report + prevention runbook: `docs/toolchain-incident-2026-10-05.md`.
 - NEE self-blocking fixed in `src/render/tracer.h`: the visibility test now skips emissive boxes (it used to block on the sampled bar's own front face), and the emission contribution uses `cosEmit/d²`. Verified with a 1024-spp probe: lit.x=0.0503, shadow=0.0, framePix=(4.0, 0.18, 0.12); `test_tracer` expects lit.x in 0.035–0.065.
 - CLI parser fixed: `parseArgs` called its `value()` lambda twice (each call bumps the arg index, so every option value was skipped — `--width 320` parsed as 0). Parser moved to `src/cli_args.h`, `--accumulate` branch restored, covered by `tests/test_args.cpp`.
 - CLI strictness fixed: `parseArgs` now rejects non-numeric/overflow values for `--width/--height/--spp/--frames` and negative `--seed` (previously `atoi` silently mapped junk to 0, e.g. `--frames abc` ran forever in PPM mode). `Display::writePPM` returns bool; `main` exits 1 with a diagnostic if a frame can't be written. Covered by extended `test_args` + new `test_display` (toneMap checks + PPM write/read round trip).
 - ctest 7/7 pass: `test_vec3`, `test_box`, `test_camera`, `test_light`, `test_tracer`, `test_args`, `test_display`.
 - PPM smoke check PASS (320x320, 16 spp, camera behind the frame at t≈9.6s, analyzed with `build/smoke_stats.exe`): 2298 bright-red frame px; the cube face facing the frame is lit and red-dominant (maxR≈13 = tone-mapped lit.x≈0.05; ~65% of face px lit, the rest in bar shadow); top face + background black. Re-verified after the CLI/display changes: frames at t_wall 9.3–9.8s show 2600–3700 bright-red px, lit red-dominant cube front, black top face + background boxes. (Note: `smoke_stats` regions are tuned for t≈9.3–9.8s; earlier in the behind-frame window, e.g. t≈9.0s, a frame bar can project into the lower-left "background" region — that is the bar itself, not a lighting leak.)
-- All work pushed to GitHub `main` (through `6b7d5a8`); local and remote in sync. Nothing outstanding.
+- All work pushed to GitHub `main` (through `8bc8759`); local and remote in sync. Nothing outstanding.
 
 ## Milestone 2 (complete, 2026-10-05): windowed real-time — white cube + rotating red frame
 
@@ -55,7 +55,7 @@ If the task is complex:
 - ctest 8/8: `test_vec3`, `test_box` (OBB rotation cases: Y-45/Y-90, Z-90, T+R, identity equivalence), `test_camera`, `test_light`, `test_scene` (new: ring sampling on the rotated plane for θ ∈ {0°,90°,180°}, lightArea/lightNormal invariance), `test_tracer` (re-anchored to the static camera: LIT θ=π center-pixel lit.x≈0.060 ∈ [0.05,0.07] red-dominant; SHADOW θ=0 exactly 0.0; FRAME direct ray = exact emission (4.0, 0.18, 0.12)), `test_args` (`--time`, `--no-accumulate`, `sppSet`), `test_display`.
 - Smoke v2 PASS (320×320 @ 32 spp, `--time 6.0`, seed-robust): 1740 bright-red px; ring top/bottom bands avgR≈204, side bars ≈125–130; cube front avgR=14.3/avgG=1.0 (all 960 region px lit, red-dominant); all four background corners exactly black. `smoke_stats` regions retuned for the static layout (bands y≈145–149/246–250, bars x≈103–108/210–216).
 
-## Milestone 3 (in progress, 2026-10-06): equatorial ring — frame centered on the cube, pitching about X
+## Milestone 3 (complete, 2026-10-06): equatorial ring — frame centered on the cube, pitching about X
 
 - Goal: the 2×2 red emissive frame becomes an **equatorial ring** — its plane passes through
   the **cube center** (`kFrameZ: -3.0 → 0.0`, ring center == cube center == pitch pivot at the
@@ -81,10 +81,10 @@ If the task is complex:
   red-dominant); all four background corners exactly black. `smoke_stats` regions retuned
   for the face-on layout (bands y≈126–128/197–199, bars x≈122–124/195–197, cube top
   y≈146–148). `smoke3/` added to `.gitignore`.
-- Pending: window-mode acceptance (visual, user-confirmed) + milestone commit + push (on
-  request). Working-tree changes: `src/main.cpp`, `src/math/mat3.h`, `src/scene/scene.h`,
-  `tests/smoke_stats.cpp`, `tests/test_scene.cpp`, `tests/test_tracer.cpp`, `AGENTS.md`,
-  `README.md`, `docs/plan-equatorial-pitch.md`, `.gitignore`.
+- Window acceptance: `pathtracer.exe --frames 2` (no `--out`) opened the SDL window (no PPM
+  fallback), 960×540 @ 4 spp ≈ 35 ms first frame, 23 ms second (≈43 fps), clean exit rc=0
+  (verified 2026-10-06; the wobble itself is visual). Milestone committed (`8bc8759`) and
+  pushed to GitHub `main` 2026-10-06; local and remote in sync.
 
 ## Toolchain notes (this machine)
 
