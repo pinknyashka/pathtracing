@@ -31,7 +31,7 @@ If the task is complex:
 
 ## Status (as of 2026-10-06, after Milestone 4: materials — white rough-plastic cube + neon-glow frame)
 
-- Repo at https://github.com/pinknyashka/pathtracing (public); local `origin` = that URL. Remote `main` is in sync with local (through the Milestone-4 commit; the Milestone-3 commit was `8bc8759`).
+- Repo at https://github.com/pinknyashka/pathtracing (public); local `origin` = that URL. Remote `main` is in sync with local (through the Milestone-4 commit `2a2c54b`; the Milestone-3 commit was `8bc8759`).
   - Push: a plain `git push origin main` works — Windows Credential Manager holds a GitHub credential for `pinknyashka` with push scope (pushed `f8d5c72..6b7d5a8` on 2026-10-05 and `1861242..8bc8759` on 2026-10-06 without an explicit token). Fallback if that credential expires: push with a token that has `public_repo`/`repo` scope (a read-only token gets 403): `git -c credential.helper= push https://x-access-token:<TOKEN>@github.com/pinknyashka/pathtracing.git main` — the `credential.helper=` override stops the token being saved to Windows Credential Manager.
 - Toolchain blocker RESOLVED offline (no msys2 package changes): `D:\Projects\__tools\mingw_7_2_0` on the machine PATH shadowed ucrt64's runtime DLLs, so gcc-15 frontends crashed at startup with `0xC00000FD`. Fix: User PATH now starts with `C:\msys64\ucrt64\bin`, plus 8 DLLs staged next to cc1/cc1plus. Full report + prevention runbook: `docs/toolchain-incident-2026-10-05.md`.
 - NEE self-blocking fixed in `src/render/tracer.h`: the visibility test now skips emissive boxes (it used to block on the sampled bar's own front face), and the emission contribution uses `cosEmit/d²`. Verified with a 1024-spp probe: lit.x=0.0503, shadow=0.0, framePix=(4.0, 0.18, 0.12); `test_tracer` expects lit.x in 0.035–0.065.
@@ -39,7 +39,7 @@ If the task is complex:
 - CLI strictness fixed: `parseArgs` now rejects non-numeric/overflow values for `--width/--height/--spp/--frames` and negative `--seed` (previously `atoi` silently mapped junk to 0, e.g. `--frames abc` ran forever in PPM mode). `Display::writePPM` returns bool; `main` exits 1 with a diagnostic if a frame can't be written. Covered by extended `test_args` + new `test_display` (toneMap checks + PPM write/read round trip).
 - ctest 9/9 pass: `test_vec3`, `test_box`, `test_camera`, `test_light`, `test_scene`, `test_material`, `test_tracer`, `test_args`, `test_display`.
 - PPM smoke check PASS (320x320, 16 spp, camera behind the frame at t≈9.6s, analyzed with `build/smoke_stats.exe`): 2298 bright-red frame px; the cube face facing the frame is lit and red-dominant (maxR≈13 = tone-mapped lit.x≈0.05; ~65% of face px lit, the rest in bar shadow); top face + background black. Re-verified after the CLI/display changes: frames at t_wall 9.3–9.8s show 2600–3700 bright-red px, lit red-dominant cube front, black top face + background boxes. (Note: `smoke_stats` regions are tuned for t≈9.3–9.8s; earlier in the behind-frame window, e.g. t≈9.0s, a frame bar can project into the lower-left "background" region — that is the bar itself, not a lighting leak.)
-- All work pushed to GitHub `main` (through the Milestone-4 commit); local and remote in sync. Nothing outstanding.
+- All work pushed to GitHub `main` (through the Milestone-4 commit `2a2c54b`); local and remote in sync. Nothing outstanding.
 - **Milestone 4 (complete, 2026-10-06): materials** — the 2-variant `Diffuse`/`Emissive` material
   is now a unified struct (diffuse `albedo` + GGX specular `f0`/`roughness` + `emission`) with
   `plastic`/`neon` presets. The **cube = white rough plastic** (`plastic({0.9,0.9,0.9},{0.04,0.04,0.04},0.4)`),
@@ -146,7 +146,7 @@ If the task is complex:
   2026-10-06; the satin sheen vs flat-matte difference is visual, user-confirmed).
 - Design decisions (plan's "Decisions") all implemented as resolved: full GGX + combined-BRDF
   NEE, pure neon emission (no glass-tube shell), Schlick `(1−F)` on the diffuse split.
-  Milestone committed and pushed to GitHub `main` 2026-10-06; local and remote in sync.
+  Milestone committed (`2a2c54b`) and pushed to GitHub `main` 2026-10-06; local and remote in sync.
 
 ## Toolchain notes (this machine)
 
