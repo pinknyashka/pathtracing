@@ -31,59 +31,64 @@ int main() {
     // top-face point (0, 0.5, 0.3): it grazes just above the front face's
     // top edge (y ~ 0.534 where it crosses z = 0.5), so the top face is the
     // first hit (row ~ 173 of a 320x320 image).
-    // M4: the cube is white rough plastic (albedo 0.9 + GGX sheen, F0 = 0.04,
-    // roughness 0.4). The top face is viewed near-grazing (view ~ +z, normal
-    // +y), so the Schlick Fresnel F_v ~ 0.8-0.9 suppresses much of the
-    // diffuse term ((1 - F_v) ~ 0.1-0.2) and the rest of the lit radiance is
-    // the red neon sheen sampled through the GGX lobe by NEE.
-    // Measured anchors (probe, same fresh-Engine-per-ray estimator): 64-spp
-    // over 32 seeds x in [0.029, 0.077], mean ~ 0.053 (sd ~ 0.010 -- the
-    // close-range NEE integrand cosL*cosEmit/d^2 varies ~20x across the top
-    // bar and the transmissive lobe choice adds scatter); 512-spp 8-seed
-    // mean x ~ 0.049. The band below covers the observed range: a broken
-    // NEE / light normal / emission drops x to ~0; a doubled contribution
-    // (mean ~ 0.098) sits at/above the top of the band.
+    // M7: the cube is now white GLOSSY plastic (F0 = 0.15, roughness 0.30 --
+    // pearl-level reflectance) and the ring red is 3x brighter (96.0, was
+    // 32.0), so the top face reads BRIGHT WHITE with a STRONG red reflection
+    // band: the ring's microfacet-sheen reflection. The geometric mirror ray
+    // of every face points into the void (the ring girdles the cube at its
+    // equator), so no true mirror image exists -- the sheen band IS the
+    // ring's reflection on the cube. Probed (64 spp, 256 seeds): x in
+    // [1.891, 3.061], y in [1.269, 1.442], x - y in [0.535, 1.670]
+    // (mean 1.038), y/x mean 0.574. A ring reverted to M6's 32.0 erodes the
+    // red lead to x - y ~ 0.4 (x/y ~ 1.3); a broken ring erodes it to ~0.
+    // A broken ambient drops x to the ring-only level; a doubled term pushes
+    // x past ~4.5.
     {
         Scene sceneLit;  // ctor leaves the frame at theta = 0
         const Vec3 lit11 = average(sceneLit, cam, 0.5f, 0.54003608f, 64, 11);
         const Vec3 lit211 = average(sceneLit, cam, 0.5f, 0.54003608f, 64, 211);
         for (int i = 0; i < 2; ++i) {
             const Vec3 lit = (i == 0 ? lit11 : lit211);
-            CHECK(lit.x > 0.03f);
-            CHECK(lit.x < 0.08f);
-            // Every radiance term is emission (4.0, 0.18, 0.12) times a
-            // channel-independent scalar: the plastic's f0 and albedo are
-            // gray, so the Schlick split F_v, the GGX lobe, and the cosine
-            // bounce all scale every channel equally (the "white sheen" is
-            // still a reflection of the red ring). y/x = 0.045 and
-            // z/x = 0.03 therefore still hold exactly (red-dominant; catches
-            // a wrong light color or a colored BRDF leak).
-            CHECK_NEAR(lit.y / lit.x, 0.18f / 4.0f, 1e-3f);
-            CHECK_NEAR(lit.z / lit.x, 0.12f / 4.0f, 1e-3f);
+            CHECK(lit.x > 1.5f);      // bright: ambient fills the face white (M6 floor, still valid)
+            CHECK(lit.x < 3.6f);      // not doubled (a doubled ambient pushes x past ~4.5)
+            CHECK(lit.x - lit.y > 0.45f);  // the strong red reflection band (probed min 0.535); a ring reverted to M6's 32.0 (x-y ~ 0.4) or a broken ring (~0) erodes it
+            CHECK(lit.x > 1.2f * lit.y);   // x/y probed min ~1.31; the red lead is now large (M6's floor was 1.05)
+            CHECK(lit.x > lit.z);
         }
     }
 
-    // SHADOW: theta = 0. The center pixel hits the front face (z = 0.5),
-    // where every ring point has cosL < 0 (the light lies behind the face),
-    // and both scatter lobes from that face (cosine and GGX) emit only into
-    // its outward +z hemisphere, which can never reach the ring (z <= 0.03)
-    // -- the pixel receives exactly zero light (M4 re-probed: lengthSq == 0.0
-    // for both seeds; a ray that tunnels into the cube exits through the
-    // unlit -z/-x/-y faces and still cannot see the ring).
+    // FRONT-FACE (M3 "SHADOW"): theta = 0. The center pixel hits the front
+    // face (z = 0.5), where every ring point has cosL < 0 (the light lies
+    // behind the face) and both scatter lobes emit only into its outward +z
+    // hemisphere, which never reaches the ring (z <= 0.03) -- so the face is
+    // unlit by the neon ring. M5: the strong neutral ambient fill (NEE'd, and
+    // visible to this face through the +z hemisphere the ring can't occlude)
+    // lights it BRIGHT WHITE. It must read as neutral white (y ~= x), NOT as
+    // the ring's red, and stay bright. M7: the cube is now white GLOSSY
+    // plastic (F0 = 0.15, roughness 0.30) and the ring red is 96.0 -- but at
+    // theta = 0 the front face is still unlit by the ring (all ring points
+    // have z < 0.5 behind the face), so it stays bright NEUTRAL white
+    // (probed 64 spp, 256 seeds: x in [1.941, 2.075], y/x = 1.000 exactly --
+    // pure neutral, no ring red on this face). A broken ambient drops x to
+    // exactly 0; a doubled ambient pushes it past ~4.5.
     {
         Scene sceneShadow;  // ctor leaves the frame at theta = 0
         const Vec3 sh12 = average(sceneShadow, cam, 0.5f, 0.5f, 64, 12);
         const Vec3 sh212 = average(sceneShadow, cam, 0.5f, 0.5f, 64, 212);
-        CHECK(sh12.lengthSq() < 1e-12f);
-        CHECK(sh212.lengthSq() < 1e-12f);
+        for (int i = 0; i < 2; ++i) {
+            const Vec3 sh = (i == 0 ? sh12 : sh212);
+            CHECK(sh.x > 1.5f);              // bright: ambient fills it white
+            CHECK(sh.x < 4.0f);              // ambient only, not doubled
+            CHECK(sh.y > 0.9f * sh.x);       // neutral white, not the ring's red
+        }
     }
 
     // FRAME: primary ray aimed straight at the top bar's front-face center
     // (0, 0.97, +0.03) at theta = 0 (the bar's front face is the +z side of
     // the ring plane). The ray passes OVER the cube (at z = 0.5 it is at
     // y ~ 1.024 > 0.5), so the bar is the first hit, and an emissive hit at
-    // bounce 0 returns the raw emission (4.0, 0.18, 0.12) with no MC noise
-    // (measured exactly).
+    // bounce 0 returns the raw emission (96.0, 0.18, 0.12) -- M7 tripled the
+    // red channel (32.0 -> 96.0) -- with no MC noise (measured exactly).
     {
         Scene sceneFrame;  // ctor leaves the frame at theta = 0
         const Ray r{Vec3(0, 2, 9), (Vec3(0, 0.97f, 0.03f) - Vec3(0, 2, 9)).unit()};
@@ -93,8 +98,8 @@ int main() {
             acc = acc + eng.rayColor(r);
         }
         const Vec3 framePix = acc * (1.f / 8.f);
-        CHECK(framePix.x > 3.0f);  // emission x = 4.0
-        CHECK_NEAR(framePix.x, 4.0f, 1e-6f);
+        CHECK(framePix.x > 90.0f);  // emission x = 96.0
+        CHECK_NEAR(framePix.x, 96.0f, 1e-6f);
         CHECK_NEAR(framePix.y, 0.18f, 1e-4f);
         CHECK_NEAR(framePix.z, 0.12f, 1e-4f);
     }

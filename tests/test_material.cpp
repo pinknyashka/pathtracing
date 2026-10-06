@@ -123,7 +123,7 @@ int main() {
 
     // Neon material: pure emission, no scattering, exact BRDF zero.
     {
-        const Material m = Material::neon(Vec3(4.0f, 0.18f, 0.12f));
+        const Material m = Material::neon(Vec3(96.0f, 0.18f, 0.12f));
         CHECK(m.isEmissive());
         CHECK(!m.isDiffuse());
         CHECK(!m.isSpecular());
@@ -142,14 +142,24 @@ int main() {
         CHECK(p.isSpecular());
         CHECK(!p.isEmissive());
 
-        const Material e = Material::neon(Vec3(4.0f, 0.18f, 0.12f));
-        CHECK(e.emission == Vec3(4.0f, 0.18f, 0.12f));
+        const Material e = Material::neon(Vec3(96.0f, 0.18f, 0.12f));
+        CHECK(e.emission == Vec3(96.0f, 0.18f, 0.12f));
         CHECK(e.albedo == Vec3(0.f, 0.f, 0.f));
         CHECK(e.f0 == Vec3(0.f, 0.f, 0.f));
         CHECK(e.roughness == 0.f);
         CHECK(e.isEmissive());
         CHECK(!e.isDiffuse());
         CHECK(!e.isSpecular());
+
+        // M7: the cube's preset is white glossy plastic (pearl-level F0).
+        const Material g = Material::glossyWhite();
+        CHECK(g.albedo == Vec3(0.9f, 0.9f, 0.9f));
+        CHECK(g.f0 == Vec3(0.15f, 0.15f, 0.15f));
+        CHECK(g.roughness == 0.30f);
+        CHECK(g.emission == Vec3(0.f, 0.f, 0.f));
+        CHECK(g.isDiffuse());
+        CHECK(g.isSpecular());
+        CHECK(!g.isEmissive());
 
         const Material d = Material::diffuse(Vec3(0.5f, 0.5f, 0.5f));
         CHECK(d.albedo == Vec3(0.5f, 0.5f, 0.5f));

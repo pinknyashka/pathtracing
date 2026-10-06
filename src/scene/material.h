@@ -27,6 +27,13 @@ struct Material {
         m.roughness = rough;
         return m;
     }
+    // M7: white glossy plastic -- a pearl-level reflectance (F0 = 0.15, above
+    // the dielectric 0.04) with a moderately tight sheen (roughness 0.30), so
+    // the surface reads as reflective: it mirrors the environment as a soft
+    // highlight and the neon ring as a strong red sheen band.
+    static Material glossyWhite() {
+        return plastic({0.9f, 0.9f, 0.9f}, {0.15f, 0.15f, 0.15f}, 0.30f);
+    }
     static Material neon(Vec3 e) {
         Material m;
         m.emission = e;

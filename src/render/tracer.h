@@ -102,7 +102,17 @@ public:
                     any = true;
                 }
             }
-            if (!any) break;
+            if (!any) {
+                // No geometry hit: this is empty space, and it stays BLACK.
+                // Nothing out in the void reflects light (only the cube and the
+                // glowing frame do), so a primary ray that escapes sees black.
+                // A bounce that escapes also adds nothing: the ambient light's
+                // illumination of every surface is estimated by NEE below, and
+                // sampling it again through the bounce would double-count it and
+                // is heavy-tailed (a cosine bounce's 1/cos weight against a
+                // smooth light field has infinite variance).
+                break;
+            }
 
             if (hit.material->isEmissive()) {
                 if (bounce == 0)
@@ -139,6 +149,31 @@ public:
             }
             nee = nee * (scene.lightArea / (float)kVisSamples);
             acc = acc + scale * nee;
+
+            // M5: ambient sky, also estimated by NEE. Cosine sampling makes the
+            // diffuse term low-variance (cosL cancels the cosine pdf, so each
+            // sample is just L_sky * albedo); the same samples light the GGX
+            // sheen. Unlike the ring NEE (which skips emitters to avoid
+            // self-blocking), the sky is blocked by any geometry -- the neon
+            // ring occludes part of it. The /kPi from the cosine pdf folds into
+            // the weight, leaving combinedBrdf * kPi per sample.
+            Vec3 sky{0, 0, 0};
+            for (int k = 0; k < kVisSamples; ++k) {
+                const Vec3 d = cosineDir(hit);
+                const float c = hit.normal.dot(d);
+                if (c <= 0.f) continue;
+                const Ray vis{hit.point + hit.normal * 1e-3f, d};
+                bool blocked = false;
+                for (const auto& b : scene.boxes) {
+                    Hit h;
+                    if (b->intersect(vis, 1e-3f, 1e30f, h)) { blocked = true; break; }
+                }
+                if (!blocked)
+                    sky = sky + scene.envRadiance(d)
+                         * combinedBrdf(*hit.material, wo, d, hit.normal) * kPi;
+            }
+            sky = sky * (1.f / (float)kVisSamples);
+            acc = acc + scale * sky;
 
             if (bounce >= 2) {
                 const float p = std::min(0.95f, std::max(hit.material->albedo.maxComponent(), 0.05f));
