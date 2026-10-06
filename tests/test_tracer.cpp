@@ -31,24 +31,33 @@ int main() {
     // top-face point (0, 0.5, 0.3): it grazes just above the front face's
     // top edge (y ~ 0.534 where it crosses z = 0.5), so the top face is the
     // first hit (row ~ 173 of a 320x320 image).
+    // M4: the cube is white rough plastic (albedo 0.9 + GGX sheen, F0 = 0.04,
+    // roughness 0.4). The top face is viewed near-grazing (view ~ +z, normal
+    // +y), so the Schlick Fresnel F_v ~ 0.8-0.9 suppresses much of the
+    // diffuse term ((1 - F_v) ~ 0.1-0.2) and the rest of the lit radiance is
+    // the red neon sheen sampled through the GGX lobe by NEE.
     // Measured anchors (probe, same fresh-Engine-per-ray estimator): 64-spp
-    // over 32 seeds x in [0.065, 0.131], mean ~ 0.093 -- the close-range
-    // NEE per-ray estimator is heavy-tailed (~17% sd; the cosL*cosEmit/d^2
-    // integrand varies ~20x across the top bar); 512-spp 8-seed mean
-    // x ~ 0.084. The band below covers the observed estimator range: a
-    // broken NEE / light normal / emission drops x to ~0, a halved or
-    // doubled contribution lands outside [0.06, 0.14].
+    // over 32 seeds x in [0.029, 0.077], mean ~ 0.053 (sd ~ 0.010 -- the
+    // close-range NEE integrand cosL*cosEmit/d^2 varies ~20x across the top
+    // bar and the transmissive lobe choice adds scatter); 512-spp 8-seed
+    // mean x ~ 0.049. The band below covers the observed range: a broken
+    // NEE / light normal / emission drops x to ~0; a doubled contribution
+    // (mean ~ 0.098) sits at/above the top of the band.
     {
         Scene sceneLit;  // ctor leaves the frame at theta = 0
         const Vec3 lit11 = average(sceneLit, cam, 0.5f, 0.54003608f, 64, 11);
         const Vec3 lit211 = average(sceneLit, cam, 0.5f, 0.54003608f, 64, 211);
         for (int i = 0; i < 2; ++i) {
             const Vec3 lit = (i == 0 ? lit11 : lit211);
-            CHECK(lit.x > 0.06f);
-            CHECK(lit.x < 0.14f);
+            CHECK(lit.x > 0.03f);
+            CHECK(lit.x < 0.08f);
             // Every radiance term is emission (4.0, 0.18, 0.12) times a
-            // channel-independent scalar, so y/x = 0.045 and z/x = 0.03
-            // hold exactly (red-dominant; catches a wrong light color).
+            // channel-independent scalar: the plastic's f0 and albedo are
+            // gray, so the Schlick split F_v, the GGX lobe, and the cosine
+            // bounce all scale every channel equally (the "white sheen" is
+            // still a reflection of the red ring). y/x = 0.045 and
+            // z/x = 0.03 therefore still hold exactly (red-dominant; catches
+            // a wrong light color or a colored BRDF leak).
             CHECK_NEAR(lit.y / lit.x, 0.18f / 4.0f, 1e-3f);
             CHECK_NEAR(lit.z / lit.x, 0.12f / 4.0f, 1e-3f);
         }
@@ -56,9 +65,11 @@ int main() {
 
     // SHADOW: theta = 0. The center pixel hits the front face (z = 0.5),
     // where every ring point has cosL < 0 (the light lies behind the face),
-    // and cosine bounces from that face stay in the +z hemisphere, which can
-    // never reach the ring (z <= 0.03) -- the pixel receives exactly zero
-    // light (measured: lengthSq == 0.0 for both seeds).
+    // and both scatter lobes from that face (cosine and GGX) emit only into
+    // its outward +z hemisphere, which can never reach the ring (z <= 0.03)
+    // -- the pixel receives exactly zero light (M4 re-probed: lengthSq == 0.0
+    // for both seeds; a ray that tunnels into the cube exits through the
+    // unlit -z/-x/-y faces and still cannot see the ring).
     {
         Scene sceneShadow;  // ctor leaves the frame at theta = 0
         const Vec3 sh12 = average(sceneShadow, cam, 0.5f, 0.5f, 64, 12);

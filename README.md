@@ -1,8 +1,8 @@
 # pathtracer
 
-CPU path tracer: a white cube lit by a glowing red square frame that wobbles around it
-(12 s period, pitching about the horizontal axis through the cube center — an equatorial
-ring), seen from a static camera.
+CPU path tracer: a white rough-plastic cube lit by a neon-glowing red square frame that
+wobbles around it (12 s period, pitching about the horizontal axis through the cube center
+— an equatorial ring), seen from a static camera.
 All rendering is computed on the CPU (no GPU). Frame rate trades off against `--spp`/resolution by design.
 
 ## Build
@@ -34,13 +34,16 @@ OpenMP is used for row-parallel sampling when available.
     build\pathtracer.exe                     # window (SDL2) or frames/ PPMs; real-time (spp 4, blend on)
     build\pathtracer.exe --spp 32 --width 1280 --height 720
     build\pathtracer.exe --frames 1 --out out --spp 64   # one still to out/frame_0001.ppm
-    build\pathtracer.exe --time 0.0 --frames 1 --out smoke3   # deterministic still (ring face-on)
+    build\pathtracer.exe --time 0.0 --frames 1 --out smoke4   # deterministic still (ring face-on)
     build\pathtracer.exe --no-accumulate     # disable the temporal blend (window mode blends by default)
 
-Scene: unit white cube (Lambertian) at the origin; a 2x2 m red emissive frame (4 thin boxes,
-an equatorial ring — its plane passes through the cube center, `z = 0` locally) pitches
+Scene: unit white cube (rough plastic — a white diffuse base with a soft GGX microfacet
+sheen) at the origin; a 2x2 m neon-glowing red frame (4 thin emissive boxes, an equatorial
+ring — its plane passes through the cube center, `z = 0` locally) pitches
 about the horizontal X axis, one full wobble every 12 s (face-on at t = 0, edge-on at
 t = 3 / 9 s, inverted at t = 6 s); static camera at `(0, 2, 9)` looking at the origin.
+Materials (Milestone 4, `docs/plan-materials.md`): the cube is white rough plastic (diffuse
++ microfacet sheen) and the frame a neon glow (emission).
 Window mode defaults to `--spp 4` with temporal accumulation on (explicit `--spp`
 overrides the default); PPM mode keeps the `--spp 8` default and blends only with
 `--accumulate`.

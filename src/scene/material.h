@@ -1,22 +1,34 @@
 #pragma once
 #include "../math/vec3.h"
 
-enum class MaterialType { Diffuse, Emissive };
-
+// Unified material: a surface participates in whichever terms are non-zero.
+//   diffuse  when albedo != 0   (Lambertian base color)
+//   specular when f0 != 0       (GGX microfacet sheen, F0 + roughness)
+//   emissive when emission != 0 (neon light; terminates the path)
 struct Material {
-    MaterialType type = MaterialType::Diffuse;
-    Vec3 albedo{0, 0, 0};
-    Vec3 emission{0, 0, 0};
+    Vec3  albedo{0, 0, 0};    // diffuse base color
+    Vec3  f0{0, 0, 0};        // specular reflectance (Fresnel F0); (0,0,0) = no specular
+    float roughness = 0.f;    // GGX microfacet roughness: 0 = mirror, 1 = fully rough
+    Vec3  emission{0, 0, 0};  // emissive radiance (neon); (0,0,0) = not a light
+
+    bool isDiffuse()  const { return albedo.maxComponent() > 0.f; }
+    bool isSpecular() const { return f0.maxComponent() > 0.f; }
+    bool isEmissive() const { return emission.maxComponent() > 0.f; }
 
     static Material diffuse(Vec3 a) {
         Material m;
-        m.type = MaterialType::Diffuse;
         m.albedo = a;
         return m;
     }
-    static Material emissive(Vec3 e) {
+    static Material plastic(Vec3 a, Vec3 f0v, float rough) {
         Material m;
-        m.type = MaterialType::Emissive;
+        m.albedo = a;
+        m.f0 = f0v;
+        m.roughness = rough;
+        return m;
+    }
+    static Material neon(Vec3 e) {
+        Material m;
         m.emission = e;
         return m;
     }

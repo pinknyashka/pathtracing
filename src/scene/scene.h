@@ -14,8 +14,10 @@ struct Scene {
     static constexpr float kFrameHalf = 1.0f;
     static constexpr float kFrameT = 0.06f;
 
-    Material cubeMat = Material::diffuse({0.9f, 0.9f, 0.9f});
-    Material frameMat = Material::emissive({4.0f, 0.18f, 0.12f});
+    // M4: cube = white rough plastic (white diffuse + soft GGX sheen, satin);
+    // frame = neon glow (pure emission, value unchanged from M3).
+    Material cubeMat = Material::plastic({0.9f, 0.9f, 0.9f}, {0.04f, 0.04f, 0.04f}, 0.4f);
+    Material frameMat = Material::neon({4.0f, 0.18f, 0.12f});
 
     std::vector<std::unique_ptr<Box>> boxes;
     float barArea[4] = {0.f, 0.f, 0.f, 0.f};
